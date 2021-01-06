@@ -40,3 +40,7 @@ while not done:
 #%%
 env.close()
 # %%
+#not run
+#save and load model parameters
+#policy.save('models/cartpole.json)
+#policy.load('models/cartpole.json)
