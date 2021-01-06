@@ -2,10 +2,12 @@
 import os
 import gym
 import matplotlib.pyplot as plt
+import numpy as np
 
 from solver import EvoSolver
 
 plt.ion()
+np.random.seed(1)
 #%%
 env = gym.make("CartPole-v0")
 
@@ -29,6 +31,9 @@ evo.train(neps=50, #number of training episodes
 plt.plot(evo.times)
 
 #%%
+plt.plot(evo.rewards)
+
+#%%
 state = env.reset()
 shape = state.flatten().shape[0]
 done = False
@@ -42,5 +47,5 @@ env.close()
 # %%
 #not run
 #save and load model parameters
-#policy.save('models/cartpole.json)
-#policy.load('models/cartpole.json)
+#evo.save('models/cartpole.json)
+#evo.load('models/cartpole.json)
