@@ -9,20 +9,21 @@ from solver import EvoSolver
 plt.ion()
 np.random.seed(1)
 #%%
-env = gym.make("CartPole-v0")
+env = gym.make('LunarLanderContinuous-v2')
 
 #%%
 evo = EvoSolver(env, 
-                nhidden=1, 
-                hidden_width=6, 
+                nhidden=2, 
+                hidden_width=8, 
                 activation='tanh', #hidden layer activation functions: tanh, relu, sigmoid, linear
-                selection='random') #action selection: random, max
+                final_activation='tanh',
+                selection='identity') #action selection: random, max
 
 #%%
 evo.train(neps=50, #number of training episodes
           lr=1e-1, #lr is step_method=='weighted'
           sigma=1e-1, #jitter sigma
-          batch_size=20, #how many trials does each particle run
+          batch_size=10, #how many trials does each particle run
           nparticles=30, 
           step_method='max', #weighted or max for particle update, seems to be domain dependent
           plot=False) #plot times every training epoch
@@ -47,5 +48,6 @@ env.close()
 # %%
 #not run
 #save and load model parameters
-#evo.save('models/cartpole.json')
-#evo.load('models/cartpole.json')
+#evo.save('models/lunarlander.json')
+#evo.load('models/lunarlander.json')
+# %%

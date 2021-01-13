@@ -2,19 +2,23 @@ import os
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import gym
 
 from tqdm import tqdm
 
 from network import EvoNetwork
 
 class EvoSolver:
-    def __init__(self, env, nhidden=1, hidden_width=12, activation='tanh', selection='max'):
-        selections = ['max', 'random']
+    def __init__(self, env, nhidden=1, hidden_width=12, activation='tanh', final_activation='softmax', selection='max'):
+        selections = ['max', 'random', 'identity']
         if selection not in selections:
             raise ValueError(f'selection must be one of {selections}')
             
         self.env = env
-        self.action_space = self.env.action_space.n
+        if type(env.action_space)==gym.spaces.discrete.Discrete:
+            self.action_space = self.env.action_space.n
+        else: #box?
+            self.action_space = self.env.action_space.shape[0]
         self.state_space = 1
         #flatten observation space
         for i in range(len(self.env.observation_space.shape)):
@@ -26,7 +30,8 @@ class EvoSolver:
                 hidden_width,
                 self.action_space,
                 nhidden=nhidden,
-                activation=activation
+                activation=activation,
+                final_activation=final_activation
             )
         
         self.times = []
@@ -110,7 +115,7 @@ class EvoSolver:
                 plt.show()
                 plt.pause(0.001)
                     
-            trng.set_description(f'Time: {round(self.times[-1], 2)}')
+            trng.set_description(f'Time: {round(self.times[-1], 2)} Rewards: {round(self.rewards[-1], 2)}')
             
         if infofile is not None:
             with open(infofile, 'w') as wrt:
@@ -128,8 +133,10 @@ class EvoSolver:
             act = self.policy_net.forward(state)[0]
         if self.selection=='max':
             action = act.argmax()
-        else: #random
+        elif self.selection=='random':
             action = np.random.choice(self.action_space, p=act)
+        elif self.selection=='identity':
+            action = act
         return action
     
     def save(self, file_path):

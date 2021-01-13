@@ -3,14 +3,14 @@ import numpy as np
 
 #%%
 class EvoNetwork:
-    def __init__(self, i, h, o, nhidden=1, activation='tanh'):
-        activations = ['tanh','relu', 'sigmoid', 'linear']
-        if activation not in activations:
+    def __init__(self, i, h, o, nhidden=1, activation='tanh', final_activation='softmax'):
+        activations = ['tanh','relu', 'sigmoid', 'linear', 'softmax']
+        if activation not in activations or final_activation not in activations:
             raise ValueError(f'activation must be one of {activations}')
             
         self.nhidden = nhidden
         self.activation = activation
-        
+        self.final_activation = final_activation
         if activation=='tanh':
             self.act = lambda x: np.tanh(x)
         elif activation=='relu':
@@ -19,10 +19,23 @@ class EvoNetwork:
             self.act = lambda x: 1/(1+np.exp(-x))
         elif activation=='linear':
             self.act = lambda x: x
+        elif activation=='softmax':
+            self.act = self.softmax
+
+        if final_activation=='tanh':
+            self.fact = lambda x: np.tanh(x)
+        elif final_activation=='relu':
+            self.fact = lambda x: np.maximum(0, x)
+        elif final_activation=='sigmoid':
+            self.fact = lambda x: 1/(1+np.exp(-x))
+        elif final_activation=='linear':
+            self.fact = lambda x: x
+        elif final_activation=='softmax':
+            self.fact = self.softmax
             
         self.layers = [{'layer': np.zeros((i+1, h)), 'activation': self.act}]
         self.layers += [{'layer': np.zeros((h+1, h)), 'activation': self.act} for _ in range(nhidden)]
-        self.layers += [{'layer': np.zeros((h+1, o)), 'activation': self.softmax}]
+        self.layers += [{'layer': np.zeros((h+1, o)), 'activation': self.fact}]
         
     def forward(self, x):
         for layer in self.layers:
@@ -83,12 +96,14 @@ class EvoNetwork:
     def dump(self):
         return {
                 'activation': self.activation,
+                'final_activation': self.final_activation,
                 'nhidden': self.nhidden,
                 'layers': [layer['layer'].tolist() for layer in self.layers]
                 }
     
     def load(self, model):
         activation = model['activation']
+        final_activation = model['final_activation']
         if activation=='tanh':
             self.act = lambda x: np.tanh(x)
         elif activation=='relu':
@@ -97,7 +112,22 @@ class EvoNetwork:
             self.act = lambda x: 1/(1+np.exp(-x))
         elif activation=='linear':
             self.act = lambda x: x
+        elif activation=='softmax':
+            self.act = self.softmax
+
+        if final_activation=='tanh':
+            self.fact = lambda x: np.tanh(x)
+        elif final_activation=='relu':
+            self.fact = lambda x: np.maximum(0, x)
+        elif final_activation=='sigmoid':
+            self.fact = lambda x: 1/(1+np.exp(-x))
+        elif final_activation=='linear':
+            self.fact = lambda x: x
+        elif final_activation=='softmax':
+            self.fact = self.softmax
+            
         self.activation = activation
+        self.final_activation = final_activation
         self.nhidden = model['nhidden']
         self.layers = [{'layer': np.array(layer), 'activation': self.act} for layer in model['layers']]
         self.layers[self.nhidden + 1]['activation'] = self.softmax
