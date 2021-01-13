@@ -3,10 +3,15 @@ import numpy as np
 
 #%%
 class EvoNetwork:
-    def __init__(self, i, h, o, nhidden=1, activation='tanh', final_activation='softmax'):
+    def __init__(self, i, h, o, nhidden=1, activation='tanh', final_activation='softmax', initialization='0'):
         activations = ['tanh','relu', 'sigmoid', 'linear', 'softmax']
         if activation not in activations or final_activation not in activations:
             raise ValueError(f'activation must be one of {activations}')
+
+        initializations = ['0', 'random']
+        if initialization not in initializations:
+            raise ValueError(f'initialization must be one of {initializations}')
+        init = 0.0 if initialization=='0' else 1.0
             
         self.nhidden = nhidden
         self.activation = activation
@@ -33,9 +38,9 @@ class EvoNetwork:
         elif final_activation=='softmax':
             self.fact = self.softmax
             
-        self.layers = [{'layer': np.zeros((i+1, h)), 'activation': self.act}]
-        self.layers += [{'layer': np.zeros((h+1, h)), 'activation': self.act} for _ in range(nhidden)]
-        self.layers += [{'layer': np.zeros((h+1, o)), 'activation': self.fact}]
+        self.layers = [{'layer': init*np.random.randn(i+1, h), 'activation': self.act}]
+        self.layers += [{'layer': init*np.random.randn(h+1, h), 'activation': self.act} for _ in range(nhidden)]
+        self.layers += [{'layer': init*np.random.randn(h+1, o), 'activation': self.fact}]
         
     def forward(self, x):
         for layer in self.layers:
@@ -78,7 +83,7 @@ class EvoNetwork:
             R = (R - R.mean()) / R.std()
         if method=='weighted':
             for i, layer in enumerate(self.layers):
-                layer['layer'] += lr/(self.nparticles*self.sigma)*np.dot(self.jitters[i], R)
+                layer['layer'] += lr*np.dot(self.jitters[i], R)/(self.nparticles*self.sigma)
         else: #max
             if (R==R.max()).sum()>1:
                 rmaxs = np.argwhere(R==R.max())[:,0]
@@ -130,6 +135,6 @@ class EvoNetwork:
         self.final_activation = final_activation
         self.nhidden = model['nhidden']
         self.layers = [{'layer': np.array(layer), 'activation': self.act} for layer in model['layers']]
-        self.layers[self.nhidden + 1]['activation'] = self.softmax
+        self.layers[self.nhidden + 1]['activation'] = self.fact
     
             

@@ -15,8 +15,10 @@ env = gym.make("CartPole-v0")
 evo = EvoSolver(env, 
                 nhidden=1, 
                 hidden_width=6, 
-                activation='tanh', #hidden layer activation functions: tanh, relu, sigmoid, linear
-                selection='random') #action selection: random, max
+                activation='tanh', #hidden layer activation functions: tanh, relu, sigmoid, softmax, linear
+                final_activation='softmax', #activation for output: tanh, relu, sigmoid, softmax, linear
+                selection='random', #action selection: random, max
+                initialization='0') #initialize policy net with 0 or n(0,1)
 
 #%%
 evo.train(neps=50, #number of training episodes

@@ -16,6 +16,8 @@ This contains the neural network which models the policy. You should not need to
 
 example_polecart.py contains example usage with the polecart environment.
 
+example_lunarlander.py contains emaple usage with the lunar lander continuous environment.
+
 # Requirements
 
 Developed with pyton==3.6.9

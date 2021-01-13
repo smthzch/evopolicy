@@ -9,7 +9,16 @@ from tqdm import tqdm
 from network import EvoNetwork
 
 class EvoSolver:
-    def __init__(self, env, nhidden=1, hidden_width=12, activation='tanh', final_activation='softmax', selection='max'):
+    def __init__(
+        self, 
+        env, 
+        nhidden=1, 
+        hidden_width=12, 
+        activation='tanh', 
+        final_activation='softmax', 
+        selection='max',
+        initialization='0'):
+
         selections = ['max', 'random', 'identity']
         if selection not in selections:
             raise ValueError(f'selection must be one of {selections}')
@@ -31,7 +40,8 @@ class EvoSolver:
                 self.action_space,
                 nhidden=nhidden,
                 activation=activation,
-                final_activation=final_activation
+                final_activation=final_activation,
+                initialization=initialization
             )
         
         self.times = []

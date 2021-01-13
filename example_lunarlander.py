@@ -15,12 +15,13 @@ env = gym.make('LunarLanderContinuous-v2')
 evo = EvoSolver(env, 
                 nhidden=2, 
                 hidden_width=8, 
-                activation='tanh', #hidden layer activation functions: tanh, relu, sigmoid, linear
-                final_activation='tanh',
-                selection='identity') #action selection: random, max
+                activation='tanh', #hidden layer activation functions: tanh, relu, sigmoid, softmax, linear
+                final_activation='tanh', #activation for output: tanh, relu, sigmoid, softmax, linear
+                selection='identity', #action selection: random, max, identity
+                initialization='0') #initialize policy net with 0 or n(0,1)
 
 #%%
-evo.train(neps=50, #number of training episodes
+evo.train(neps=50, #number of training episodes (50-100 seem to work well, this cell can be ran again to train more steps)
           lr=1e-1, #lr is step_method=='weighted'
           sigma=1e-1, #jitter sigma
           batch_size=10, #how many trials does each particle run
