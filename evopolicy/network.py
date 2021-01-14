@@ -79,9 +79,10 @@ class EvoNetwork:
         if method not in methods:
             raise ValueError(f'method must be one of {methods}')
         R = np.array(R)
-        if R.std()>0:
-            R = (R - R.mean()) / R.std()
         if method=='weighted':
+            R = R - R.mean()
+            if R.std()>0:
+                R = R / R.std()
             for i, layer in enumerate(self.layers):
                 layer['layer'] += lr*np.dot(self.jitters[i], R)/(self.nparticles*self.sigma)
         else: #max

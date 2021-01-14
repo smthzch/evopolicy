@@ -6,7 +6,7 @@ import gym
 
 from tqdm import tqdm
 
-from network import EvoNetwork
+from evopolicy.network import EvoNetwork
 
 class EvoSolver:
     def __init__(
@@ -28,10 +28,16 @@ class EvoSolver:
             self.action_space = self.env.action_space.n
         else: #box?
             self.action_space = self.env.action_space.shape[0]
+        
         self.state_space = 1
-        #flatten observation space
-        for i in range(len(self.env.observation_space.shape)):
-            self.state_space *= self.env.observation_space.shape[i]
+        self.obs_disc = False
+        if type(env.observation_space)==gym.spaces.discrete.Discrete:
+            self.state_space = env.observation_space.n
+            self.obs_disc = True
+        else:
+            #flatten observation space
+            for i in range(len(self.env.observation_space.shape)):
+                self.state_space *= self.env.observation_space.shape[i]
         
         self.selection = selection
         self.policy_net = EvoNetwork(
@@ -49,6 +55,10 @@ class EvoSolver:
     
     def pathfind(self, particle=None, limit=None):
         state = self.env.reset()
+        if self.obs_disc:
+            si = state
+            state = np.zeros(self.state_space, dtype=float)
+            state[si] = 1.0
         state = state.reshape((1, self.state_space))
         self.path = dict(
                 actions=[],
@@ -66,6 +76,10 @@ class EvoSolver:
             self.path['actions'] += [action]
             self.path['rewards'] += [reward]
             self.path['time'] += 1
+            if self.obs_disc:
+                si = next_state
+                next_state = np.zeros(self.state_space, dtype=float)
+                next_state[si] = 1.0
             state = next_state.reshape((1, self.state_space))
             i+=1
             
@@ -93,20 +107,17 @@ class EvoSolver:
             
             ep_rewards = []
             ep_times = []
-            best_time = float('inf')
             for i in range(nparticles):
-                part_rewards = []
+                part_rewards = 0.0
                 part_times = []
-                while len(part_rewards) < batch_size:
+                for _ in range(batch_size):
                     self.pathfind(i, limit=limit)
-                    part_rewards += [sum(self.path['rewards'])]
+                    part_rewards += sum(self.path['rewards'])
                     part_times += [self.path['time']]
                 
-                ep_rewards += [sum(part_rewards)]
+                ep_rewards += [part_rewards]
                 part_time = sum(part_times)/len(part_times)
                 ep_times += [part_time]
-                if part_time > best_time:
-                    best_time = part_time
                     
             self.times += [sum(ep_times)/len(ep_times)]
             self.rewards += [sum(ep_rewards)/len(ep_rewards)]
