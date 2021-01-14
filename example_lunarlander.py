@@ -21,7 +21,7 @@ evo = EvoSolver(env,
                 initialization='0') #initialize policy net with 0 or random i.e. N(0,1)
 
 #%%
-evo.train(neps=18, #number of training episodes
+evo.train(neps=150, #number of training episodes
           lr=1e-1, #lr is step_method=='weighted'
           sigma=1e-1, #jitter sigma
           batch_size=10, #how many trials does each particle run
