@@ -14,9 +14,13 @@ This contains the neural network which models the policy. You should not need to
 
 # Example
 
-example_polecart.py contains example usage with the polecart environment.
+example_cartpole.py contains example usage with the polecart environment.
+
+![](gifs/cartpole.gif)
 
 example_lunarlander.py contains emaple usage with the lunar lander continuous environment.
+
+![](gifs/lunarlander.gif)
 
 # Requirements
 
