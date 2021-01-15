@@ -2,6 +2,13 @@
 
 This package solves reinforcement learning problems using evolutionary strategeies as outlined in [Evolution Strategies as a Scalable Alternative to Reinforcement Learning](https://arxiv.org/abs/1703.03864)
 
+These methods only seem to work with stochastic policies. Stochastic policies implemented include:
+
+- Categorical - select one action with probability p_i
+- Normal - n dimensional output parameterized by mu and log(sd) vectors
+- MVNormal with Covariance - n dimensional output with mu and covariance parameters (the upper triangle matrix of cholesky decomposed precision matrix)
+- Dirichlet - n dimensional output summing to one (this is not the same as softmax, it is stochastic)
+
 # Files
 
 **.solver.py**
@@ -18,9 +25,13 @@ example_cartpole.py contains example usage with the polecart environment.
 
 ![](gifs/cartpole.gif)
 
-example_lunarlander.py contains emaple usage with the lunar lander continuous environment.
+example_lunarlander.py contains example usage with the lunar lander continuous environment.
 
 ![](gifs/lunarlander.gif)
+
+example_bipedalwalker.py contains example usage with the bipedal walker environment.
+
+![](gifs/walker300.gif)
 
 # Requirements
 

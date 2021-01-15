@@ -19,10 +19,24 @@ class EvoSolver:
         selection='max',
         initialization='0'):
 
-        selections = ['max', 'random', 'identity']
+        #check action selection and activations valiid
+        selections = ['max', 'categorical', "random", "normal", "mvnormal", "dirichlet", 'identity']
         if selection not in selections:
             raise ValueError(f'selection must be one of {selections}')
-            
+        if selection=='random' and (final_activation!='mvnormal' and final_activation!='normal' and final_activation!='softmax' and final_activation!='dirichlet'):
+            raise ValueError("Selection and activation mismatch. Must be random and one of [normal, mvnormal, dirichlet, softmax]")
+        
+        #random selection must be changed to categorical distribution or continuous
+        #if final activation==softmax then categorical
+        #if final_activation==normal then continuous
+        selection = selection if selection!='random' \
+            else 'categorical' if final_activation=='softmax' \
+                else 'normal' if final_activation=='normal' \
+                    else 'mvnormal' if final_activation=='mvnormal' \
+                        else 'dirichlet' #if final_activation=='dirichlet'
+        self.selection = selection
+
+        #env info
         self.env = env
         if type(env.action_space)==gym.spaces.discrete.Discrete:
             self.action_space = self.env.action_space.n
@@ -39,7 +53,7 @@ class EvoSolver:
             for i in range(len(self.env.observation_space.shape)):
                 self.state_space *= self.env.observation_space.shape[i]
         
-        self.selection = selection
+        #network
         self.policy_net = EvoNetwork(
                 self.state_space,
                 hidden_width,
@@ -154,8 +168,23 @@ class EvoSolver:
             act = self.policy_net.forward(state)[0]
         if self.selection=='max':
             action = act.argmax()
-        elif self.selection=='random':
+        elif self.selection=='categorical':
             action = np.random.choice(self.action_space, p=act)
+        elif self.selection=='normal':
+            act = act.reshape((2,-1))
+            mu = act[0,:]
+            sd = np.exp(act[1,:])
+            action = np.random.normal(loc=mu, scale=sd)
+        elif self.selection=='mvnormal':
+            Z = np.random.randn(self.action_space)
+            mu = act[0:self.action_space]
+            U = np.zeros((self.action_space, self.action_space), dtype=float) #cholseky
+            U[np.triu_indices(self.action_space)] = act[self.action_space:] 
+            di = np.diag_indices(self.action_space)
+            U[di] = np.exp(U[di])
+            action = mu + np.dot(np.linalg.inv(U), Z)
+        elif self.selection=='dirichlet':
+            action = np.random.dirichlet(act)
         elif self.selection=='identity':
             action = act
         return action

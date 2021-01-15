@@ -61,4 +61,29 @@ fig, ax = plt.subplots()
 ani = FuncAnimation(fig, animate, frames=ims, interval=40)
 ani.save('gifs/lunarlander.gif')
 
+#%%
+env = gym.make("BipedalWalker-v3")
+evo = EvoSolver(env)
+evo.load('models/walker_mvnormal300.json')
+
+#%%
+state = env.reset()
+shape = state.flatten().shape[0]
+done = False
+
+ims = []
+while not done:
+    ims += [env.render(mode='rgb_array')]
+    state = state.reshape((1,shape))
+    act = evo.selectAction(state)
+    state, reward, done, _ = env.step(act)
+
+env.close()
+
+#%%
+ims = ims[::4]
+fig, ax = plt.subplots()
+ani = FuncAnimation(fig, animate, frames=ims, interval=40)
+ani.save('gifs/walker300.gif')
+
 # %%

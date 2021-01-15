@@ -4,7 +4,7 @@ import numpy as np
 #%%
 class EvoNetwork:
     def __init__(self, i, h, o, nhidden=1, activation='tanh', final_activation='softmax', initialization='0'):
-        activations = ['tanh','relu', 'sigmoid', 'linear', 'softmax']
+        activations = ['tanh','relu', 'sigmoid', 'linear', 'softmax', 'normal', 'mvnormal','dirichlet']
         if activation not in activations or final_activation not in activations:
             raise ValueError(f'activation must be one of {activations}')
 
@@ -37,6 +37,14 @@ class EvoNetwork:
             self.fact = lambda x: x
         elif final_activation=='softmax':
             self.fact = self.softmax
+        elif final_activation=='normal':
+            o *= 2 #return mu and log(sigma) for each output dim
+            self.fact = lambda x: x
+        elif final_activation=='mvnormal':
+            o = int(o*(o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
+            self.fact = lambda x: x
+        elif final_activation=='dirichlet':
+            self.fact = lambda x: np.maximum(1, x)
             
         self.layers = [{'layer': init*np.random.randn(i+1, h), 'activation': self.act}]
         self.layers += [{'layer': init*np.random.randn(h+1, h), 'activation': self.act} for _ in range(nhidden)]
@@ -131,6 +139,12 @@ class EvoNetwork:
             self.fact = lambda x: x
         elif final_activation=='softmax':
             self.fact = self.softmax
+        elif final_activation=='normal':
+            self.fact = lambda x: x
+        elif final_activation=='mvnormal':
+            self.fact = lambda x: x
+        elif final_activation=='dirichlet':
+            self.fact = lambda x: np.maximum(0, x)
             
         self.activation = activation
         self.final_activation = final_activation
