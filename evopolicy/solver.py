@@ -17,7 +17,8 @@ class EvoSolver:
         activation='tanh', 
         final_activation='softmax', 
         selection='max',
-        initialization='0'):
+        initialization='0',
+        nntype='mlp'):
 
         #check action selection and activations valiid
         selections = ['max', 'categorical', "random", "normal", "mvnormal", "dirichlet", 'identity']
@@ -61,7 +62,8 @@ class EvoSolver:
                 nhidden=nhidden,
                 activation=activation,
                 final_activation=final_activation,
-                initialization=initialization
+                initialization=initialization,
+                type=nntype
             )
         
         self.times = []
@@ -69,6 +71,7 @@ class EvoSolver:
     
     def pathfind(self, particle=None, limit=None):
         state = self.env.reset()
+        self.policy_net.reset()
         if self.obs_disc:
             si = state
             state = np.zeros(self.state_space, dtype=float)
@@ -162,6 +165,7 @@ class EvoSolver:
         
     
     def selectAction(self, state, particle=None):
+        state = state.reshape((1,-1))
         if particle is not None:
             act = self.policy_net.forwardParticle(particle, state)[0]
         else:
@@ -178,16 +182,20 @@ class EvoSolver:
         elif self.selection=='mvnormal':
             Z = np.random.randn(self.action_space)
             mu = act[0:self.action_space]
-            U = np.zeros((self.action_space, self.action_space), dtype=float) #cholseky
-            U[np.triu_indices(self.action_space)] = act[self.action_space:] 
+            L = np.zeros((self.action_space, self.action_space), dtype=float) #cholseky
+            L[np.tril_indices(self.action_space)] = act[self.action_space:] 
             di = np.diag_indices(self.action_space)
-            U[di] = np.exp(U[di])
-            action = mu + np.dot(np.linalg.inv(U), Z)
+            L[di] = np.exp(L[di])
+            action = mu + np.dot(L, Z)
         elif self.selection=='dirichlet':
             action = np.random.dirichlet(act)
         elif self.selection=='identity':
             action = act
         return action
+
+    def reset(self):
+        self.policy_net.reset()
+        return self.env.reset()
     
     def save(self, file_path):
         model = self.policy_net.dump()

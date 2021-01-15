@@ -3,7 +3,17 @@ import numpy as np
 
 #%%
 class EvoNetwork:
-    def __init__(self, i, h, o, nhidden=1, activation='tanh', final_activation='softmax', initialization='0'):
+    def __init__(
+        self, 
+        i, 
+        h, 
+        o, 
+        nhidden=1, 
+        activation='tanh', 
+        final_activation='softmax', 
+        initialization='0',
+        type='mlp'):
+
         activations = ['tanh','relu', 'sigmoid', 'linear', 'softmax', 'normal', 'mvnormal','dirichlet']
         if activation not in activations or final_activation not in activations:
             raise ValueError(f'activation must be one of {activations}')
@@ -12,8 +22,14 @@ class EvoNetwork:
         if initialization not in initializations:
             raise ValueError(f'initialization must be one of {initializations}')
         init = 0.0 if initialization=='0' else 1.0
+
+        types = ['mlp', 'rnn']
+        if type not in types:
+            raise ValueError(f'type must be one of {types}')
+        self.type = type
             
         self.nhidden = nhidden
+        self.hiddenwidth = h
         self.activation = activation
         self.final_activation = final_activation
         if activation=='tanh':
@@ -45,22 +61,32 @@ class EvoNetwork:
             self.fact = lambda x: x
         elif final_activation=='dirichlet':
             self.fact = lambda x: np.maximum(1, x)
-            
-        self.layers = [{'layer': init*np.random.randn(i+1, h), 'activation': self.act}]
+
+        ih = 0
+        if type=='rnn':
+            ih = h #to concatenate hidden layer to input
+            self.h = np.zeros((1,ih)) #hidden layer, empy if mlp
+        else:
+            self.h = np.zeros(0)
+        self.layers = [{'layer': init*np.random.randn(i+ih+1, h), 'activation': self.act}]
         self.layers += [{'layer': init*np.random.randn(h+1, h), 'activation': self.act} for _ in range(nhidden)]
         self.layers += [{'layer': init*np.random.randn(h+1, o), 'activation': self.fact}]
         
     def forward(self, x):
-        for layer in self.layers:
+        x = np.concatenate((x, self.h), axis=1)
+        for j, layer in enumerate(self.layers):
             x = layer['activation'](
                     np.dot(
                             np.concatenate((np.ones((x.shape[0], 1)), x), axis=1),
                             layer['layer']
                         )
                 )
+            if j==0 and self.type=='rnn':
+                self.h = x.reshape((1,-1)).copy()
         return x
     
-    def forwardParticle(self, i, x):
+    def forwardParticle(self, i, x, h=None):
+        x = np.concatenate((x, self.h), axis=1)
         for j, layer in enumerate(self.layers):
             x = layer['activation'](
                     np.dot(
@@ -68,7 +94,12 @@ class EvoNetwork:
                             self.jlayers[j][:,:,i]
                         )
                 )
+            if j==0 and self.type=='rnn':
+                self.h = x.reshape((1,-1)).copy()
         return x
+
+    def reset(self):
+        self.h = np.zeros_like(self.h)
     
     def jitter(self, sigma=1e-1, nparticles=10):
         self.sigma = sigma
@@ -111,7 +142,9 @@ class EvoNetwork:
         return {
                 'activation': self.activation,
                 'final_activation': self.final_activation,
+                'type': self.type,
                 'nhidden': self.nhidden,
+                'hiddenwidth': self.hiddenwidth,
                 'layers': [layer['layer'].tolist() for layer in self.layers]
                 }
     
@@ -148,8 +181,15 @@ class EvoNetwork:
             
         self.activation = activation
         self.final_activation = final_activation
+        self.type = model['type']
+        self.hiddenwidth = model['hiddenwidth']
+        if self.type=='rnn':
+            self.h = np.zeros((1,self.hiddenwidth))
+        else:
+            self.h = np.zeros(0)
         self.nhidden = model['nhidden']
         self.layers = [{'layer': np.array(layer), 'activation': self.act} for layer in model['layers']]
         self.layers[self.nhidden + 1]['activation'] = self.fact
     
             
+# %%
