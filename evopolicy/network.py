@@ -73,7 +73,8 @@ class EvoNetwork:
         self.layers += [{'layer': init*np.random.randn(h+1, o), 'activation': self.fact}]
         
     def forward(self, x):
-        x = np.concatenate((x, self.h), axis=1)
+        if self.type=='rnn':
+            x = np.concatenate((x, self.h), axis=1)
         for j, layer in enumerate(self.layers):
             x = layer['activation'](
                     np.dot(
@@ -85,8 +86,9 @@ class EvoNetwork:
                 self.h = x.reshape((1,-1)).copy()
         return x
     
-    def forwardParticle(self, i, x, h=None):
-        x = np.concatenate((x, self.h), axis=1)
+    def forwardParticle(self, i, x):
+        if self.type=='rnn':
+            x = np.concatenate((x, self.h), axis=1)
         for j, layer in enumerate(self.layers):
             x = layer['activation'](
                     np.dot(
