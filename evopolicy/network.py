@@ -1,78 +1,28 @@
 #%%
 import numpy as np
 
-#%%
-class EvoNetwork:
-    def __init__(
-        self, 
-        i, 
-        h, 
-        o, 
-        nhidden=1, 
-        activation='tanh', 
-        final_activation='softmax', 
-        initialization='0',
-        type='mlp'):
+def softmax(x):
+    xm = x.max()
+    lse = xm + np.log(np.exp(x-xm).sum())
+    return np.exp(x-lse)
 
-        activations = ['tanh','relu', 'sigmoid', 'linear', 'softmax', 'normal', 'mvnormal','dirichlet']
-        if activation not in activations or final_activation not in activations:
-            raise ValueError(f'activation must be one of {activations}')
+activations = {
+    'tanh': lambda x: np.tanh(x),
+    'relu': lambda x: np.maximum(0, x),
+    'sigmoid': lambda x: 1/(1+np.exp(-x)),
+    'linear': lambda x: x,
+    'softmax': softmax,
+    'normal': lambda x: x,
+    'mvnormal': lambda x: x,
+    'dirichlet': lambda x: np.maximum(1, x)
+}
 
-        initializations = ['0', 'random']
-        if initialization not in initializations:
-            raise ValueError(f'initialization must be one of {initializations}')
-        init = 0.0 if initialization=='0' else 1.0
+class BaseNetwork:
+    def __init__(self):
+        raise NotImplementedError()
 
-        types = ['mlp', 'rnn']
-        if type not in types:
-            raise ValueError(f'type must be one of {types}')
-        self.type = type
-            
-        self.nhidden = nhidden
-        self.hiddenwidth = h
-        self.activation = activation
-        self.final_activation = final_activation
-        if activation=='tanh':
-            self.act = lambda x: np.tanh(x)
-        elif activation=='relu':
-            self.act = lambda x: np.maximum(0, x)
-        elif activation=='sigmoid':
-            self.act = lambda x: 1/(1+np.exp(-x))
-        elif activation=='linear':
-            self.act = lambda x: x
-        elif activation=='softmax':
-            self.act = self.softmax
-
-        if final_activation=='tanh':
-            self.fact = lambda x: np.tanh(x)
-        elif final_activation=='relu':
-            self.fact = lambda x: np.maximum(0, x)
-        elif final_activation=='sigmoid':
-            self.fact = lambda x: 1/(1+np.exp(-x))
-        elif final_activation=='linear':
-            self.fact = lambda x: x
-        elif final_activation=='softmax':
-            self.fact = self.softmax
-        elif final_activation=='normal':
-            o *= 2 #return mu and log(sigma) for each output dim
-            self.fact = lambda x: x
-        elif final_activation=='mvnormal':
-            o = int(o*(o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
-            self.fact = lambda x: x
-        elif final_activation=='dirichlet':
-            self.fact = lambda x: np.maximum(1, x)
-
-        ih = 0
-        if type=='rnn':
-            ih = h #to concatenate hidden layer to input
-            self.h = np.zeros((1,ih)) #hidden layer, empy if mlp
-        else:
-            self.h = np.zeros(0)
-        self.layers = [{'layer': init*np.random.randn(i+ih+1, h), 'activation': self.act}]
-        self.layers += [{'layer': init*np.random.randn(h+1, h), 'activation': self.act} for _ in range(nhidden)]
-        self.layers += [{'layer': init*np.random.randn(h+1, o), 'activation': self.fact}]
-        
     def forward(self, x):
+        x = x.reshape(x.shape[0], -1)
         if self.type=='rnn':
             x = np.concatenate((x, self.h), axis=1)
         for j, layer in enumerate(self.layers):
@@ -87,6 +37,7 @@ class EvoNetwork:
         return x
     
     def forwardParticle(self, i, x):
+        x = x.reshape(x.shape[0], -1)
         if self.type=='rnn':
             x = np.concatenate((x, self.h), axis=1)
         for j, layer in enumerate(self.layers):
@@ -134,12 +85,57 @@ class EvoNetwork:
                 rmax = R.argmax()
             for i, layer in enumerate(self.layers):
                 layer['layer'] += self.jitters[i][:,:,rmax]
+                
+
+#%%
+class EvoNetwork(BaseNetwork):
+    def __init__(
+        self, 
+        i, 
+        h, 
+        o, 
+        nhidden=1, 
+        activation='tanh', 
+        final_activation='softmax', 
+        initialization='0',
+        type='mlp'):
+
+        if activation not in activations or final_activation not in activations:
+            raise ValueError(f'activation must be one of {activations}')
+
+        initializations = ['0', 'random']
+        if initialization not in initializations:
+            raise ValueError(f'initialization must be one of {initializations}')
+        init = 0.0 if initialization=='0' else 1.0
+
+        types = ['mlp', 'rnn']
+        if type not in types:
+            raise ValueError(f'type must be one of {types}')
+        self.type = type
             
-    def softmax(self, x):
-        xm = x.max()
-        lse = xm + np.log(np.exp(x-xm).sum())
-        return np.exp(x-lse)
-    
+        self.nhidden = nhidden
+        self.hiddenwidth = h
+        self.activation = activation
+        self.final_activation = final_activation
+        self.act = activations[activation]
+        self.fact = activations[final_activation]
+
+        if final_activation=='normal':
+            o *= 2 #return mu and log(sigma) for each output dim
+        elif final_activation=='mvnormal':
+            o = int(o*(o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
+
+        ih = 0
+        if type=='rnn':
+            ih = h #to concatenate hidden layer to input
+            self.h = np.zeros((1,ih)) #hidden layer, empy if mlp
+        else:
+            self.h = np.zeros(0)
+        self.layers = [{'layer': init*np.random.randn(i+ih+1, h), 'activation': self.act}]
+        self.layers += [{'layer': init*np.random.randn(h+1, h), 'activation': self.act} for _ in range(nhidden)]
+        self.layers += [{'layer': init*np.random.randn(h+1, o), 'activation': self.fact}]
+  
+                
     def dump(self):
         return {
                 'activation': self.activation,
@@ -153,36 +149,9 @@ class EvoNetwork:
     def load(self, model):
         activation = model['activation']
         final_activation = model['final_activation']
-        if activation=='tanh':
-            self.act = lambda x: np.tanh(x)
-        elif activation=='relu':
-            self.act = lambda x: np.maximum(0, x)
-        elif activation=='sigmoid':
-            self.act = lambda x: 1/(1+np.exp(-x))
-        elif activation=='linear':
-            self.act = lambda x: x
-        elif activation=='softmax':
-            self.act = self.softmax
+        self.act = activations[activation]
+        self.fact = activations[final_activation]
 
-        if final_activation=='tanh':
-            self.fact = lambda x: np.tanh(x)
-        elif final_activation=='relu':
-            self.fact = lambda x: np.maximum(0, x)
-        elif final_activation=='sigmoid':
-            self.fact = lambda x: 1/(1+np.exp(-x))
-        elif final_activation=='linear':
-            self.fact = lambda x: x
-        elif final_activation=='softmax':
-            self.fact = self.softmax
-        elif final_activation=='normal':
-            self.fact = lambda x: x
-        elif final_activation=='mvnormal':
-            self.fact = lambda x: x
-        elif final_activation=='dirichlet':
-            self.fact = lambda x: np.maximum(0, x)
-            
-        self.activation = activation
-        self.final_activation = final_activation
         self.type = model['type']
         self.hiddenwidth = model['hiddenwidth']
         if self.type=='rnn':
@@ -195,3 +164,104 @@ class EvoNetwork:
     
             
 # %%
+class PolypNetwork(BaseNetwork):
+    def __init__(
+        self, 
+        i,  
+        o, 
+        activation='tanh', 
+        final_activation='softmax', 
+        initialization='0',
+        type='mlp'):
+
+        if activation not in activations or final_activation not in activations:
+            raise ValueError(f'activation must be one of {activations}')
+
+        initializations = ['0', 'random']
+        if initialization not in initializations:
+            raise ValueError(f'initialization must be one of {initializations}')
+        init = 0.0 if initialization=='0' else 1.0
+
+        types = ['mlp', 'rnn']
+        if type not in types:
+            raise ValueError(f'type must be one of {types}')
+        self.type = type
+            
+        h = 1
+        self.hiddenwidth = h
+        self.activation = activation
+        self.final_activation = final_activation
+        self.act = activations[activation]
+        self.fact = activations[final_activation]
+
+        if final_activation=='normal':
+            o *= 2 #return mu and log(sigma) for each output dim
+        elif final_activation=='mvnormal':
+            o = int(o*(o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
+
+        ih = 0
+        if type=='rnn':
+            ih = 1 #to concatenate hidden layer to input
+            self.h = np.zeros((1,ih)) #hidden layer, empy if mlp
+        else:
+            self.h = np.zeros(0)
+        self.layers = [{'layer': init*np.random.randn(i + 1, h), 'activation': self.act}]
+        self.layers += [{'layer': init*np.random.randn(h + 1, o), 'activation': self.fact}]
+
+    def split(self):
+        layer = self.layers[0]['layer']
+        split_ix = (layer ** 2).sum(axis=0).argmax() # split node with largest norm
+        # create 2 new nodes with opposite weights to cancel effect
+        layer = np.concatenate(
+            [layer, layer[:,[split_ix]], -layer[:,[split_ix]]],
+            axis=1
+        )
+        self.layers[0]['layer'] = layer
+
+        # update final node to duplicate weights
+        flayer = self.layers[1]['layer']
+        flayer = np.concatenate(
+            [flayer, flayer[[split_ix + 1],:], flayer[[split_ix + 1],:]],
+            axis=0
+        )
+        self.layers[1]['layer'] = flayer
+
+        self.hiddenwidth += 2
+            
+    def step(self, R, lr, method='max'):
+        methods = ['max']
+        if method not in methods:
+            raise ValueError(f'method must be one of {methods}')
+        R = np.array(R)
+        if (R==R.max()).sum()>1:
+            rmaxs = np.argwhere(R==R.max())[:,0]
+            rmax = np.random.choice(rmaxs)
+        else:
+            rmax = R.argmax()
+        for i, layer in enumerate(self.layers):
+            layer['layer'] += self.jitters[i][:,:,rmax]
+        return rmax
+                
+    def dump(self):
+        return {
+                'activation': self.activation,
+                'final_activation': self.final_activation,
+                'type': self.type,
+                'hiddenwidth': self.hiddenwidth,
+                'layers': [layer['layer'].tolist() for layer in self.layers]
+                }
+    
+    def load(self, model):
+        activation = model['activation']
+        final_activation = model['final_activation']
+        self.act = activations[activation]
+        self.fact = activations[final_activation]
+
+        self.type = model['type']
+        self.hiddenwidth = model['hiddenwidth']
+        if self.type=='rnn':
+            self.h = np.zeros((1,self.hiddenwidth))
+        else:
+            self.h = np.zeros(0)
+        self.layers = [{'layer': np.array(layer), 'activation': self.act} for layer in model['layers']]
+        self.layers[1]['activation'] = self.fact
