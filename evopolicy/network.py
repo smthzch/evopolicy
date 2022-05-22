@@ -18,8 +18,44 @@ activations = {
 }
 
 class BaseNetwork:
-    def __init__(self):
-        raise NotImplementedError()
+    def __init__(
+        self, 
+        h, 
+        o, 
+        activation='tanh', 
+        final_activation='softmax', 
+        initialization='0',
+        type='mlp'
+    ):
+        if activation not in activations or final_activation not in activations:
+            raise ValueError(f'activation must be one of {activations}')
+
+        initializations = ['0', 'random']
+        if initialization not in initializations:
+            raise ValueError(f'initialization must be one of {initializations}')
+        self.init = 0.0 if initialization=='0' else 1.0
+
+        types = ['mlp', 'rnn']
+        if type not in types:
+            raise ValueError(f'type must be one of {types}')
+        self.type = type
+            
+        self.activation = activation
+        self.final_activation = final_activation
+        self.act = activations[activation]
+        self.fact = activations[final_activation]
+
+        if final_activation=='normal':
+            o *= 2 #return mu and log(sigma) for each output dim
+        elif final_activation=='mvnormal':
+            o = int(o*(o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
+
+        self.ih = 0
+        if type=='rnn':
+            self.ih = h #to concatenate hidden layer to input
+            self.h = np.zeros((1,self.ih)) #hidden layer, empy if mlp
+        else:
+            self.h = np.zeros(0)
 
     def forward(self, x):
         x = x.reshape(x.shape[0], -1)
@@ -99,41 +135,12 @@ class EvoNetwork(BaseNetwork):
         final_activation='softmax', 
         initialization='0',
         type='mlp'):
-
-        if activation not in activations or final_activation not in activations:
-            raise ValueError(f'activation must be one of {activations}')
-
-        initializations = ['0', 'random']
-        if initialization not in initializations:
-            raise ValueError(f'initialization must be one of {initializations}')
-        init = 0.0 if initialization=='0' else 1.0
-
-        types = ['mlp', 'rnn']
-        if type not in types:
-            raise ValueError(f'type must be one of {types}')
-        self.type = type
-            
+        super().__init__(h, o, activation, final_activation, initialization, type)
         self.nhidden = nhidden
         self.hiddenwidth = h
-        self.activation = activation
-        self.final_activation = final_activation
-        self.act = activations[activation]
-        self.fact = activations[final_activation]
-
-        if final_activation=='normal':
-            o *= 2 #return mu and log(sigma) for each output dim
-        elif final_activation=='mvnormal':
-            o = int(o*(o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
-
-        ih = 0
-        if type=='rnn':
-            ih = h #to concatenate hidden layer to input
-            self.h = np.zeros((1,ih)) #hidden layer, empy if mlp
-        else:
-            self.h = np.zeros(0)
-        self.layers = [{'layer': init*np.random.randn(i+ih+1, h), 'activation': self.act}]
-        self.layers += [{'layer': init*np.random.randn(h+1, h), 'activation': self.act} for _ in range(nhidden)]
-        self.layers += [{'layer': init*np.random.randn(h+1, o), 'activation': self.fact}]
+        self.layers = [{'layer': self.init*np.random.randn(i + self.ih + 1, h), 'activation': self.act}]
+        self.layers += [{'layer': self.init*np.random.randn(h + 1, h), 'activation': self.act} for _ in range(nhidden)]
+        self.layers += [{'layer': self.init*np.random.randn(h + 1, o), 'activation': self.fact}]
   
                 
     def dump(self):
@@ -173,44 +180,14 @@ class PolypNetwork(BaseNetwork):
         final_activation='softmax', 
         initialization='0',
         type='mlp'):
-
-        if activation not in activations or final_activation not in activations:
-            raise ValueError(f'activation must be one of {activations}')
-
-        initializations = ['0', 'random']
-        if initialization not in initializations:
-            raise ValueError(f'initialization must be one of {initializations}')
-        init = 0.0 if initialization=='0' else 1.0
-
-        types = ['mlp', 'rnn']
-        if type not in types:
-            raise ValueError(f'type must be one of {types}')
-        self.type = type
-            
-        h = 1
-        self.hiddenwidth = h
-        self.activation = activation
-        self.final_activation = final_activation
-        self.act = activations[activation]
-        self.fact = activations[final_activation]
-
-        if final_activation=='normal':
-            o *= 2 #return mu and log(sigma) for each output dim
-        elif final_activation=='mvnormal':
-            o = int(o*(o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
-
-        ih = 0
-        if type=='rnn':
-            ih = 1 #to concatenate hidden layer to input
-            self.h = np.zeros((1,ih)) #hidden layer, empy if mlp
-        else:
-            self.h = np.zeros(0)
-        self.layers = [{'layer': init*np.random.randn(i + 1, h), 'activation': self.act}]
-        self.layers += [{'layer': init*np.random.randn(h + 1, o), 'activation': self.fact}]
+        super().__init__(1, o, activation, final_activation, initialization, type)
+        self.layers = [{'layer': self.init*np.random.randn(i + 1, 1), 'activation': self.act}]
+        self.layers += [{'layer': self.init*np.random.randn(2, o), 'activation': self.fact}]
 
     def split(self):
         layer = self.layers[0]['layer']
-        split_ix = (layer ** 2).sum(axis=0).argmax() # split node with largest norm
+        flayer = self.layers[1]['layer']
+        split_ix = (flayer ** 2).sum(axis=1)[1:].argmax() # split node with largest norm
         # create 2 new nodes with opposite weights to cancel effect
         layer = np.concatenate(
             [layer, layer[:,[split_ix]], -layer[:,[split_ix]]],
@@ -219,7 +196,6 @@ class PolypNetwork(BaseNetwork):
         self.layers[0]['layer'] = layer
 
         # update final node to duplicate weights
-        flayer = self.layers[1]['layer']
         flayer = np.concatenate(
             [flayer, flayer[[split_ix + 1],:], flayer[[split_ix + 1],:]],
             axis=0

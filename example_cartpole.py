@@ -44,7 +44,7 @@ while not done:
     state = state.reshape((1,shape))
     act = evo.selectAction(state)
     state, reward, done, _ = env.step(act)
-#%%
+
 env.close()
 # %%
 #not run
