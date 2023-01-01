@@ -9,11 +9,6 @@ These methods only seem to work with stochastic policies. Stochastic policies im
 - MVNormal with Covariance - n dimensional output with mu and covariance parameters (the upper triangle matrix of cholesky decomposed precision matrix)
 - Dirichlet - n dimensional output summing to one (this is not the same as softmax, it is stochastic)
 
-# Polyp Networks
-
-Available networks include a **Polyp** network which grows the number of hidden nodes
-from an initial single node.
-
 # Files
 
 **.solver.py**

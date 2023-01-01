@@ -1,4 +1,3 @@
-#%%
 import numpy as np
 
 def softmax(x):
@@ -121,9 +120,7 @@ class BaseNetwork:
                 rmax = R.argmax()
             for i, layer in enumerate(self.layers):
                 layer['layer'] += self.jitters[i][:,:,rmax]
-                
 
-#%%
 class EvoNetwork(BaseNetwork):
     def __init__(
         self, 
@@ -168,76 +165,3 @@ class EvoNetwork(BaseNetwork):
         self.nhidden = model['nhidden']
         self.layers = [{'layer': np.array(layer), 'activation': self.act} for layer in model['layers']]
         self.layers[self.nhidden + 1]['activation'] = self.fact
-    
-            
-# %%
-class PolypNetwork(BaseNetwork):
-    def __init__(
-        self, 
-        i,  
-        o, 
-        activation='tanh', 
-        final_activation='softmax', 
-        initialization='0',
-        type='mlp'):
-        super().__init__(1, o, activation, final_activation, initialization, type)
-        self.layers = [{'layer': self.init*np.random.randn(i + 1, 1), 'activation': self.act}]
-        self.layers += [{'layer': self.init*np.random.randn(2, o), 'activation': self.fact}]
-
-    def split(self):
-        layer = self.layers[0]['layer']
-        flayer = self.layers[1]['layer']
-        split_ix = (flayer ** 2).sum(axis=1)[1:].argmax() # split node with largest norm
-        # create 2 new nodes with opposite weights to cancel effect
-        layer = np.concatenate(
-            [layer, layer[:,[split_ix]], -layer[:,[split_ix]]],
-            axis=1
-        )
-        self.layers[0]['layer'] = layer
-
-        # update final node to duplicate weights
-        flayer = np.concatenate(
-            [flayer, flayer[[split_ix + 1],:], flayer[[split_ix + 1],:]],
-            axis=0
-        )
-        self.layers[1]['layer'] = flayer
-
-        self.hiddenwidth += 2
-            
-    def step(self, R, lr, method='max'):
-        methods = ['max']
-        if method not in methods:
-            raise ValueError(f'method must be one of {methods}')
-        R = np.array(R)
-        if (R==R.max()).sum()>1:
-            rmaxs = np.argwhere(R==R.max())[:,0]
-            rmax = np.random.choice(rmaxs)
-        else:
-            rmax = R.argmax()
-        for i, layer in enumerate(self.layers):
-            layer['layer'] += self.jitters[i][:,:,rmax]
-        return rmax
-                
-    def dump(self):
-        return {
-                'activation': self.activation,
-                'final_activation': self.final_activation,
-                'type': self.type,
-                'hiddenwidth': self.hiddenwidth,
-                'layers': [layer['layer'].tolist() for layer in self.layers]
-                }
-    
-    def load(self, model):
-        activation = model['activation']
-        final_activation = model['final_activation']
-        self.act = activations[activation]
-        self.fact = activations[final_activation]
-
-        self.type = model['type']
-        self.hiddenwidth = model['hiddenwidth']
-        if self.type=='rnn':
-            self.h = np.zeros((1,self.hiddenwidth))
-        else:
-            self.h = np.zeros(0)
-        self.layers = [{'layer': np.array(layer), 'activation': self.act} for layer in model['layers']]
-        self.layers[1]['activation'] = self.fact

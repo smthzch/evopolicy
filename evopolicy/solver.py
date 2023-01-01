@@ -6,13 +6,12 @@ import gym
 
 from tqdm import tqdm
 
-from evopolicy.network import EvoNetwork, PolypNetwork
+from evopolicy.network import EvoNetwork
 
 class EvoSolver:
     def __init__(
         self, 
-        env, 
-        network_type='evo',
+        env,
         nhidden=1, 
         hidden_width=12, 
         activation='tanh', 
@@ -56,30 +55,16 @@ class EvoSolver:
                 self.state_space *= self.env.observation_space.shape[i]
         
         #network
-        network_types = ['evo', 'polyp']
-        if network_type not in network_types:
-            raise ValueError(f'network_type must be one of {network_types}')
-        self.network_type = network_type
-        if network_type == 'evo':
-            self.policy_net = EvoNetwork(
-                self.state_space,
-                hidden_width,
-                self.action_space,
-                nhidden=nhidden,
-                activation=activation,
-                final_activation=final_activation,
-                initialization=initialization,
-                type=nntype
-            )
-        else:
-            self.policy_net = PolypNetwork(
-                self.state_space,
-                self.action_space,
-                activation=activation,
-                final_activation=final_activation,
-                initialization=initialization,
-                type=nntype
-            )
+        self.policy_net = EvoNetwork(
+            self.state_space,
+            hidden_width,
+            self.action_space,
+            nhidden=nhidden,
+            activation=activation,
+            final_activation=final_activation,
+            initialization=initialization,
+            type=nntype
+        )
         
         self.times = []
         self.rewards = []
@@ -128,17 +113,12 @@ class EvoSolver:
               infofile=None,
               modpath=None,
               plot=False):
-        if self.network_type == 'polyp':
-            step_method = 'max'
-        last_survivor = 1
         trng = tqdm(range(neps))
         for i_episode in trng:
             if (i_episode+1)%decay_step == 0:
                 lr *= decay 
                 sigma *= decay 
             
-            if self.network_type == 'polyp' and last_survivor == 0:
-                self.policy_net.split()
             self.policy_net.jitter(sigma, nparticles)
             
             ep_rewards = []
@@ -158,7 +138,7 @@ class EvoSolver:
             self.times += [sum(ep_times)/len(ep_times)]
             self.rewards += [sum(ep_rewards)/len(ep_rewards)]
             
-            last_survivor = self.policy_net.step(ep_rewards, lr, step_method)
+            self.policy_net.step(ep_rewards, lr, step_method)
             
             if infofile is not None:
                 with open(infofile, 'w') as wrt:
