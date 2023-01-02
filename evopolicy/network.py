@@ -44,10 +44,11 @@ class BaseNetwork:
         self.act = activations[activation]
         self.fact = activations[final_activation]
 
+        self.o = o
         if final_activation=='normal':
-            o *= 2 #return mu and log(sigma) for each output dim
+            self.o *= 2 #return mu and log(sigma) for each output dim
         elif final_activation=='mvnormal':
-            o = int(o*(o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
+            self.o = int(self.o*(self.o+3)/2) #return mu and log(sigma) and covariance uppertri for each output dim
 
         self.ih = 0
         if type=='rnn':
@@ -137,7 +138,7 @@ class EvoNetwork(BaseNetwork):
         self.hiddenwidth = h
         self.layers = [{'layer': self.init*np.random.randn(i + self.ih + 1, h), 'activation': self.act}]
         self.layers += [{'layer': self.init*np.random.randn(h + 1, h), 'activation': self.act} for _ in range(nhidden)]
-        self.layers += [{'layer': self.init*np.random.randn(h + 1, o), 'activation': self.fact}]
+        self.layers += [{'layer': self.init*np.random.randn(h + 1, self.o), 'activation': self.fact}]
   
                 
     def dump(self):

@@ -2,3 +2,5 @@ venv/
 models/
 .*/
 __*/
+
+*.egg-info/
