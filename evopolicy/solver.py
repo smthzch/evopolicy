@@ -225,6 +225,8 @@ class MultiEvoSolver:
         final_activation='softmax', 
         selection='max',
         initialization='0',
+        action_size=None,
+        action_transform=lambda x: x,
         nntype='mlp'):
 
         #check action selection and activations valiid
@@ -246,7 +248,9 @@ class MultiEvoSolver:
 
         #env info
         self.wrap = wrap
-        if isinstance(self.wrap.env.action_space, gym.spaces.discrete.Discrete):
+        if action_size:
+            self.action_space = action_size
+        elif isinstance(self.wrap.env.action_space, gym.spaces.discrete.Discrete):
             self.action_space = self.wrap.env.action_space.n
         else: #box?
             self.action_space = self.wrap.env.action_space.shape[0]
@@ -272,7 +276,8 @@ class MultiEvoSolver:
             initialization=initialization,
             type=nntype
         )
-        
+        self.action_transform = action_transform
+
         self.times = []
         self.rewards = []
     
@@ -296,7 +301,7 @@ class MultiEvoSolver:
                 self.wrap.agent_action(action)
             next_state, reward, done, _ = self.wrap.step()
             self.path['actions'] += [self.wrap.agent_actions]
-            self.path['rewards'] += [reward]
+            self.path['rewards'] += [reward.sum()]
             self.path['time'] += 1
             i+=1
             
@@ -390,7 +395,7 @@ class MultiEvoSolver:
             action = np.random.dirichlet(act)
         elif self.selection=='identity':
             action = act
-        return action
+        return self.action_transform(action)
 
     def reset(self):
         self.policy_net.reset()
