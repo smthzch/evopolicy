@@ -14,76 +14,74 @@ np.random.seed(1)
 def animate(i):
     plt.imshow(i)
 #%%
-env = gym.make("CartPole-v0")
+env = gym.make("CartPole-v0", render_mode="rgb_array")
 evo = EvoSolver(env)
 evo.load('models/cartpole.json')
 
 #%%
-state = env.reset()
+state = env.reset()[0]
 shape = state.flatten().shape[0]
 done = False
 
 ims = []
 while not done:
-    ims += [env.render(mode='rgb_array')]
+    ims += [env.render()]
     state = state.reshape((1,shape))
     act = evo.selectAction(state)
-    state, reward, done, _ = env.step(act)
+    state, reward, term, trun, _ = env.step(act)
+    done = term or trun
 
 env.close()
 #%%
-ims = ims[::4]
 fig, ax = plt.subplots()
 ani = FuncAnimation(fig, animate, frames=ims, interval=40)
 ani.save('gifs/cartpole.gif')
 
 #%%
-env = gym.make("LunarLanderContinuous-v2")
+env = gym.make("LunarLanderContinuous-v2", render_mode="rgb_array")
 evo = EvoSolver(env)
 evo.load('models/lunarlander.json')
 
 #%%
-state = env.reset()
+state = env.reset()[0]
 shape = state.flatten().shape[0]
 done = False
 
 ims = []
 while not done:
-    ims += [env.render(mode='rgb_array')]
+    ims += [env.render()]
     state = state.reshape((1,shape))
     act = evo.selectAction(state)
-    state, reward, done, _ = env.step(act)
+    state, reward, term, trun, _ = env.step(act)
+    done = term or trun
 
 env.close()
 #%%
-ims = ims[::4]
 fig, ax = plt.subplots()
 ani = FuncAnimation(fig, animate, frames=ims, interval=40)
 ani.save('gifs/lunarlander.gif')
 
 #%%
-env = gym.make("BipedalWalker-v3")
+env = gym.make("BipedalWalker-v3", render_mode="rgb_array")
 evo = EvoSolver(env)
 evo.load('models/walker_mvnormal300.json')
 
 #%%
-state = env.reset()
+state = env.reset()[0]
 shape = state.flatten().shape[0]
 done = False
 
 ims = []
 while not done:
-    ims += [env.render(mode='rgb_array')]
+    ims += [env.render()]
     state = state.reshape((1,shape))
     act = evo.selectAction(state)
-    state, reward, done, _ = env.step(act)
+    state, reward, term, trun, _ = env.step(act)
+    done = term or trun
 
 env.close()
 
 #%%
-ims = ims[::4]
 fig, ax = plt.subplots()
 ani = FuncAnimation(fig, animate, frames=ims, interval=40)
 ani.save('gifs/walker300.gif')
-
-# %%
