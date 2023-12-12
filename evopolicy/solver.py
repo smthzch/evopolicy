@@ -70,7 +70,7 @@ class EvoSolver:
         self.rewards = []
     
     def pathfind(self, particle=None, limit=None):
-        state = self.env.reset()
+        state = self.env.reset()[0]
         self.policy_net.reset()
         if self.obs_disc:
             si = state
@@ -89,7 +89,8 @@ class EvoSolver:
             if i==limit:
                 break
             action = self.selectAction(state, particle)
-            next_state, reward, done, _ = self.env.step(action)
+            next_state, reward, term, trun, _ = self.env.step(action)
+            done = term or trun
             self.path['actions'] += [action]
             self.path['rewards'] += [reward]
             self.path['time'] += 1
@@ -194,7 +195,7 @@ class EvoSolver:
 
     def reset(self):
         self.policy_net.reset()
-        return self.env.reset()
+        return self.env.reset()[0]
     
     def save(self, file_path):
         model = self.policy_net.dump()

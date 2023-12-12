@@ -35,7 +35,8 @@ example_bipedalwalker.py contains example usage with the bipedal walker environm
 
 # Requirements
 
-Developed with pyton==3.6.9
+Developed with `python==3.10`
 
 Install requirements with:
-> pip install -r requirements.txt
+> pip install -r requirements.txt # install swig first
+> pip install -e .
