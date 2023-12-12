@@ -6,7 +6,6 @@ import numpy as np
 
 from evopolicy.solver import EvoSolver
 
-plt.ion()
 np.random.seed(1)
 #%%
 env = gym.make('LunarLanderContinuous-v2')
@@ -36,14 +35,15 @@ plt.plot(evo.times)
 plt.plot(evo.rewards)
 
 #%%
-state = env.reset()
+env = gym.make('LunarLanderContinuous-v2', render_mode="human")
+state = env.reset()[0]
 shape = state.flatten().shape[0]
 done = False
 while not done:
-    env.render()
     state = state.reshape((1,shape))
     act = evo.selectAction(state)
-    state, reward, done, _ = env.step(act)
+    next_state, reward, term, trun, _ = env.step(act)
+    done = term or trun
 
 env.close()
 # %%
