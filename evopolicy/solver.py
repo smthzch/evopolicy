@@ -2,7 +2,7 @@ import os
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-import gym
+import gymnasium as gym
 
 from tqdm import tqdm
 
