@@ -8,7 +8,7 @@ setup(
     author_email='ezke.smith@gmail.com',
     packages=['evopolicy'],
     install_requires=[
-        'gym[box2d]',
+        'gymnasium[box2d]',
         'matplotlib',
         'numpy',
         "swig",
