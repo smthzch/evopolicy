@@ -18,7 +18,8 @@ class EvoSolver:
         final_activation='softmax', 
         selection='max',
         initialization='0',
-        nntype='mlp'):
+        nntype='mlp'
+        reward_func=lambda x: x):
 
         #check action selection and activations valiid
         selections = ['max', 'categorical', "random", "normal", "mvnormal", "dirichlet", 'identity']
@@ -68,6 +69,8 @@ class EvoSolver:
         
         self.times = []
         self.rewards = []
+
+        self.reward_func = reward_func
     
     def pathfind(self, particle=None, limit=None):
         state = self.env.reset()[0]
@@ -92,7 +95,7 @@ class EvoSolver:
             next_state, reward, term, trun, _ = self.env.step(action)
             done = term or trun
             self.path['actions'] += [action]
-            self.path['rewards'] += [reward]
+            self.path['rewards'] += [self.reward_func(reward)]
             self.path['time'] += 1
             if self.obs_disc:
                 si = next_state
