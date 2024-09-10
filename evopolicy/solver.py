@@ -18,8 +18,9 @@ class EvoSolver:
         final_activation='softmax', 
         selection='max',
         initialization='0',
-        nntype='mlp'
-        reward_func=lambda x: x):
+        nntype='mlp',
+        reward_func=lambda x: x,
+    ):
 
         #check action selection and activations valiid
         selections = ['max', 'categorical', "random", "normal", "mvnormal", "dirichlet", 'identity']
